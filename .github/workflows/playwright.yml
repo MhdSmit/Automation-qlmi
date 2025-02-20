@@ -1,0 +1,52 @@
+name: Playwright Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select the environment"
+        required: true
+        default: "DEV"
+        type: choice
+        options:
+          - "DEV"
+          - "STG"
+          - "PROD"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ inputs.environment || 'DEV' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Set Environment Variable
+        run: |
+          if [ "$ENVIRONMENT" == "DEV" ]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+          elif [ "$ENVIRONMENT" == "STG" ]; then
+            echo "ENV=stage" >> $GITHUB_ENV
+          else
+            echo "ENV=production" >> $GITHUB_ENV
+          fi
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          ENV: ${{ env.ENV }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
